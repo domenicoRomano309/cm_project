@@ -16,7 +16,7 @@ function Statistics = L_BFGS(X_hat, y_hat, x_0, m, max_iters, solution, lambda)
 %
 % Output:
 %   Statistics: matrix which contains each iteration's statistics (number 
-%       of the iteration, gradient norm, relative error norm) and also the
+%       of the iteration, gradient norm, relative error) and also the
 %       values of the current hyperparameters (lambda, m)
 %
 
