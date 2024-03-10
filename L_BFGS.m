@@ -1,5 +1,6 @@
 % Algorithm 7.5 in "Numerical optimization" (Nocedal, Wright) page 179
-function Statistics = L_BFGS(X_hat, y_hat, x_0, m, max_iters, solution, lambda)
+function Statistics = L_BFGS(X_hat, y_hat, x_0, m, max_iters, solution, ...
+    lambda, sv_Xhat, cond_num_Xhat)
 %
 % Description: implementation by scratch of L-BFGS method in order to 
 %   solve the  following LLS problem:   min_w||X_hat*w - y_hat||
@@ -16,19 +17,36 @@ function Statistics = L_BFGS(X_hat, y_hat, x_0, m, max_iters, solution, lambda)
 %
 % Output:
 %   Statistics: matrix which contains each iteration's statistics (number 
-%       of the iteration, gradient norm, relative error) and also the
-%       values of the current hyperparameters (lambda, m)
+%       of the iteration, gradient norm, relative error norm) and also the
+%       values of the current hyperparameters (lambda, m) and info relative
+%       to the convergence rate
 %
 
-Statistics = zeros(max_iters, 5);
+Statistics = zeros(max_iters, 11);
 
 Q_qe = 2* (X_hat'* X_hat); %Q of the quadratic equation
 sz = size(Q_qe);
 
+smallest_eigenvalue_Q = min(2*(sv_Xhat.^2));
+
 H_0 = eye(sz);
+
+
+func_g = @(w) 1/2*w'*Q_qe*w - 2*y_hat'*X_hat*w + y_hat'*y_hat;
+f_0 = func_g(x_0);
+f_star = func_g(solution);
+
+func_vals_bp = sqrt(2*(f_0 - f_star));
+small_eig_bp = 1/sqrt(smallest_eigenvalue_Q);
+sol_norm_bp = 1/norm(solution);
+
+bound_const_part = func_vals_bp * small_eig_bp * sol_norm_bp;
+
 
 % definition of the gradient function (grad. of our function g)
 grad_g = @(w) w'* (Q_qe) - 2*y_hat'*X_hat;
+
+%hessian_g = Q_qe;
 
 H0_k = H_0;
 x_k = x_0;
@@ -114,6 +132,23 @@ Statistics = Statistics(1:(k+1), :);
         Statistics(k+1, 4) = rel_error;
 
         Statistics(k+1, 5) = norm(grad_f_k);
+        
+
+        Statistics(k+1, 6) = func_vals_bp;
+        Statistics(k+1, 7) = small_eig_bp;
+        Statistics(k+1, 8) = sol_norm_bp;
+
+        Statistics(k+1, 9) = bound_const_part;
+
+        
+        r_iter = -1;
+        if k>0
+            r_iter = nthroot(rel_error/bound_const_part, k/2);
+        end
+
+        Statistics(k+1, 10) = r_iter;
+
+        Statistics(k+1, 11) = cond_num_Xhat;
 
     end
 
