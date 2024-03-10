@@ -1,7 +1,7 @@
 clear;
 
-lambda_values = [1e-10, 1e-5, 0.01, 1, 100, 1e5];
-m_values = [3, 5, 7, 10];
+lambda_values = logspace(-10, 5, 16);
+m_values = [3, 4, 5, 6, 7, 8, 9, 10];
 max_iters = 100;
 
 
@@ -9,22 +9,33 @@ Stats = [];
 Times = [];
 
 for lambda = lambda_values
+    fprintf('\nlambda = %d\n',lambda);
+
     [X_hat, y_hat] = Init(lambda);
-    
+
+    sv_Xhat=svd(X_hat);
+
     % effective minimum point (used to calculate the relative error)
     solution = linsolve(X_hat, y_hat);
 
     % initial approximation vector set to all zeros
     w_0 = zeros(size(solution));
 
-    for m = m_values
-        NewStats = L_BFGS(sparse(X_hat), y_hat, w_0, m, max_iters, solution, lambda);
-        Stats = [Stats; NewStats];
 
+    cond_num_Xhat = cond(X_hat);
+
+    for m = m_values
+        
+        fprintf('m = %d\n',m);
+        NewStats = L_BFGS(sparse(X_hat), y_hat, w_0, m, max_iters, solution, ...
+            lambda, sv_Xhat, cond_num_Xhat);
+        Stats = [Stats; NewStats];
         f = @() L_BFGS_chrono(X_hat, y_hat, w_0, m, max_iters);
         new_row = [lambda m timeit(f)];
         Times = [Times; new_row];
+
     end
+    
 end
 
 writematrix(Stats,'statistics.csv')
@@ -39,6 +50,7 @@ rng(seed);
 
 X = table2array(readtable("./ML-CUP22-TR.csv"));
 X = X(:, 2:end);
+
 
 X_hat = [X'; lambda * eye(size(X,1))];
 
